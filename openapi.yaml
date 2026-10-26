@@ -2,12 +2,22 @@ openapi: 3.1.0
 info:
   title: Calisthenics Workout Tracker API
   version: 1.0.0
-  description: API for logging calisthenics workouts, calculating volume, and tracking personal records.
+  description: >
+    Official API contract between Frontend and Backend for the Calisthenics & Street Workout Tracker.
+    Provides endpoints to log workouts, query sessions with filtering, remove records, and calculate
+    deterministic training volume and category PRs.
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+security: [] # Open access: No authentication required for MVP / demo mode
+
 paths:
   /api/workouts:
     post:
       summary: Log a new workout entry
+      description: Record a completed calisthenics workout entry.
       operationId: createWorkout
+      security: []
       requestBody:
         required: true
         content:
@@ -16,30 +26,40 @@ paths:
               $ref: '#/components/schemas/WorkoutCreate'
       responses:
         '201':
-          description: Workout created successfully
+          description: Workout entry created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Workout'
         '422':
-          description: Validation error
+          description: Validation error in submitted payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+
     get:
       summary: List all workout entries
+      description: Retrieve logged workouts ordered by date in descending order (most recent first). Supports filtering by category and exercise name.
       operationId: listWorkouts
+      security: []
       parameters:
         - name: category
           in: query
           required: false
+          description: Filter workouts by movement category
           schema:
             $ref: '#/components/schemas/ExerciseCategory'
         - name: exercise
           in: query
           required: false
+          description: Case-insensitive substring search for exercise name
           schema:
             type: string
+            example: "pull"
       responses:
         '200':
-          description: List of workouts ordered by date descending
+          description: List of workouts ordered by most recent first
           content:
             application/json:
               schema:
@@ -50,23 +70,32 @@ paths:
   /api/workouts/{id}:
     delete:
       summary: Delete a workout entry
+      description: Permanently remove a workout log by its unique numeric ID.
       operationId: deleteWorkout
+      security: []
       parameters:
         - name: id
           in: path
           required: true
+          description: Unique identifier of the workout to delete
           schema:
             type: integer
       responses:
         '204':
-          description: Workout deleted successfully
+          description: Workout entry successfully deleted
         '404':
-          description: Workout not found
+          description: Workout entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/stats/summary:
     get:
-      summary: Retrieve training volume and personal records summary
+      summary: Get volume and PR summary
+      description: Calculates aggregate metrics across all logged sessions (total workouts count, total volume = sum of sets * reps, and category PRs).
       operationId: getStatsSummary
+      security: []
       responses:
         '200':
           description: Analytics summary metrics
@@ -79,7 +108,12 @@ components:
   schemas:
     ExerciseCategory:
       type: string
-      enum: [Pull, Push, Legs, Core]
+      enum:
+        - Pull
+        - Push
+        - Legs
+        - Core
+      description: Functional calisthenics movement category
 
     WorkoutCreate:
       type: object
@@ -91,24 +125,30 @@ components:
       properties:
         exercise_name:
           type: string
+          description: Name of the exercise
           example: "Pull-ups"
         category:
           $ref: '#/components/schemas/ExerciseCategory'
         sets:
           type: integer
           minimum: 1
+          description: Number of sets completed
           example: 4
         reps:
           type: integer
           minimum: 1
+          description: Repetitions completed per set
           example: 10
         added_weight:
           type: number
           default: 0.0
+          minimum: 0.0
+          description: Extra weight in kilograms (0 for bodyweight only)
           example: 10.0
         date:
           type: string
           format: date
+          description: ISO-8601 date format (YYYY-MM-DD), defaults to current date if omitted
           example: "2026-10-26"
 
     Workout:
@@ -124,6 +164,7 @@ components:
       properties:
         id:
           type: integer
+          description: Unique identifier
           example: 1
         exercise_name:
           type: string
@@ -146,19 +187,28 @@ components:
 
     CategoryPR:
       type: object
+      required:
+        - Pull
+        - Push
+        - Legs
+        - Core
       properties:
         Pull:
           type: integer
-          example: 15
+          description: Highest single-set reps achieved in Pull category
+          example: 12
         Push:
           type: integer
+          description: Highest single-set reps achieved in Push category
           example: 25
         Legs:
           type: integer
+          description: Highest single-set reps achieved in Legs category
           example: 30
         Core:
           type: integer
-          example: 20
+          description: Highest single-set reps achieved in Core category
+          example: 15
 
     StatsSummary:
       type: object
@@ -169,10 +219,39 @@ components:
       properties:
         total_workouts:
           type: integer
-          example: 12
+          description: Total number of workout sessions logged
+          example: 4
         total_volume:
           type: integer
-          description: Total repetitions (sum of sets * reps)
-          example: 480
+          description: Total repetitions completed across all workouts (sum of sets * reps)
+          example: 158
         personal_records:
           $ref: '#/components/schemas/CategoryPR'
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          example: "Workout not found"
+
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  anyOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string

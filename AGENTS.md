@@ -1,21 +1,27 @@
 # AGENTS.md
 
-## Commands
-- `uv sync` - install dependencies
-- `uv run pytest` - run the whole test suite
-- `uv run pytest tests/test_api.py` - run a specific test file
+## Backend Commands
+- `uv sync` - install and sync dependencies
+- `uv add <PACKAGE-NAME>` - add a dependency to pyproject.toml
+- `uv run python <PYTHON-FILE>` - run a Python script
+- `uv run pytest` - run the whole backend test suite
 - `uv run uvicorn app.main:app --reload` - run the development server
 
-## Rules
-- Dependencies are added in `pyproject.toml`. Do not add one without asking.
+## Frontend Commands
+- `cd frontend && npm i` - install frontend dependencies
+- `cd frontend && npm run dev` - start Vite development server
+- `cd frontend && npm test` - run frontend Vitest test suite
+- `cd frontend && npm run build` - build production assets
+
+## Engineering Rules
+- Regularly commit code to git with meaningful messages after each step.
 - Work on one GitHub issue / task at a time.
-- Always run and pass the tests before completing a task.
-- Commit regularly with meaningful messages.
+- `openapi.yaml` is the single source of truth and contract between frontend and backend.
+- Backend code lives inside `/backend`, frontend lives inside `/frontend`.
+- Dependencies are declared in `pyproject.toml` (backend) and `package.json` (frontend).
 
 ## Documents
-- `docs/process.md` - how work is organized
+- `docs/process.md` - development lifecycle, orchestrator, and agent roles
 - `docs/spec.md` - project specification and product scope
 - `docs/tasks.md` - backlog tasks and GitHub issues mapping
-- Before writing tests, read `docs/testing-guidelines.md`
-- For anything touching the UI, read `docs/design-system.md`
-- For API specifications and endpoints, read `openapi.yaml`
+- `openapi.yaml` - explicit API contract shared by frontend and backend
