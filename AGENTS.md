@@ -2,10 +2,14 @@
 
 ## Makefile Shortcuts
 - `make run` - run FastAPI backend server on port 8093 (`http://localhost:8093/docs`)
+- `make run-postgres` - run FastAPI backend against PostgreSQL on port 5434
 - `make test` - run backend test suite
 - `make frontend-dev` - start Vite frontend server
 - `make frontend-test` - run frontend Vitest suite
 - `make test-all` - run all backend and frontend tests
+- `make compose-up` - build and run full stack in Docker Compose (FastAPI + React on port 8095, PostgreSQL on port 5434)
+- `make compose-down` - stop Docker Compose services
+- `make e2e` - run Playwright end-to-end tests against Docker Compose
 - `make install` - install all dependencies
 
 ## Backend Commands
