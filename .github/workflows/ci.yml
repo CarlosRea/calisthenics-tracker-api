@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  id-token: write   # Required for AWS OIDC authentication
-  contents: read    # Required to checkout the repository
-
 jobs:
   # ==========================================
   # 1. Tests in Parallel
@@ -72,7 +68,6 @@ jobs:
       - name: Build & launch Docker Compose stack (FastAPI + PostgreSQL)
         run: |
           docker compose up --build -d
-          # Health check polling for local stack
           timeout 60 bash -c 'until curl -sf http://localhost:8095/api/health; do sleep 2; done'
 
       - name: Set up Node.js for Playwright
@@ -96,71 +91,41 @@ jobs:
         run: docker compose down -v
 
   # ==========================================
-  # 3. AWS Deployment via GitHub OIDC Role
+  # 3. Release & Health Verification
   # ==========================================
-  deploy:
-    name: Deploy to AWS (OIDC) & Validate Health
+  release:
+    name: Release Build & Health Validation
     needs: [e2e-test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials via GitHub OIDC Role
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN || 'arn:aws:iam::123456789012:role/GitHubActionsDeploymentRole' }}
-          role-session-name: github-actions-calisthenics-deploy
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Tag Production Image
+      - name: Build Production Image
         run: |
           docker build -t calisthenics-tracker:${{ github.sha }} .
-          echo "Production image built successfully."
+          echo "Production image calisthenics-tracker:${{ github.sha }} built successfully."
 
-      - name: Execute Deployment
+      - name: Validate Release via Health Endpoint
         run: |
-          echo "Deploying calisthenics-tracker:${{ github.sha }} to AWS environment..."
-          # Deploy step: push to Amazon ECR, update ECS task definition, or deploy App Runner/Lightsail
-          echo "Deployment initiated."
+          echo "Starting production container to validate health endpoint..."
+          docker run -d --rm -p 8095:8095 --name prod-check calisthenics-tracker:${{ github.sha }}
+          sleep 4
 
-      # ==========================================
-      # 4. Post-Deployment Health Check Validation
-      # ==========================================
-      - name: Validate Deployment via Health Endpoint
-        run: |
-          TARGET_URL="${{ vars.APP_URL || 'http://localhost:8095' }}"
-          echo "Validating deployment health on: $TARGET_URL/api/health"
-
-          # If evaluating locally in CI runner or mock environment:
-          if [ "$TARGET_URL" = "http://localhost:8095" ]; then
-            # Verify local container health endpoint response
-            docker run -d --rm -p 8095:8095 --name prod-check calisthenics-tracker:${{ github.sha }}
-            sleep 3
-            curl -sf http://localhost:8095/api/health | grep -q "healthy" && echo "Local release health check PASSED!"
-            docker stop prod-check
-          else
-            # Poll target production endpoint with retries
-            MAX_ATTEMPTS=30
-            ATTEMPT=1
-            SUCCESS=0
-
-            while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-              echo "Health check attempt $ATTEMPT of $MAX_ATTEMPTS..."
-              if curl -sf --max-time 5 "$TARGET_URL/api/health" | grep -q "healthy"; then
-                echo "SUCCESS: Production health check verified on $TARGET_URL/api/health"
-                SUCCESS=1
-                break
-              fi
-              ATTEMPT=$((ATTEMPT + 1))
-              sleep 5
-            done
-
-            if [ $SUCCESS -ne 1 ]; then
-              echo "ERROR: Production deployment health check failed after $MAX_ATTEMPTS attempts."
-              exit 1
+          echo "Polling http://localhost:8095/api/health..."
+          for i in {1..10}; do
+            if curl -sf http://localhost:8095/api/health | grep -q "healthy"; then
+              echo "Release health check PASSED!"
+              docker stop prod-check
+              exit 0
             fi
-          fi
+            echo "Attempt $i: waiting for service..."
+            sleep 2
+          done
+
+          echo "ERROR: Health check failed."
+          docker stop prod-check
+          exit 1
