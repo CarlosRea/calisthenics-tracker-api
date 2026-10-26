@@ -1,6 +1,10 @@
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.database import init_db
 from app.routers import auth, stats, workouts
@@ -20,7 +24,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS so the React frontend on localhost:5173 can interact seamlessly
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,7 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount routers
+# Mount API routers first so they take precedence over static files
 app.include_router(workouts.router)
 app.include_router(stats.router)
 app.include_router(auth.router)
@@ -38,3 +42,9 @@ app.include_router(auth.router)
 @app.get("/api/health", tags=["Health"])
 def health_check():
     return {"status": "healthy", "service": "calisthenics-tracker-api"}
+
+
+# Mount frontend static files if present (e.g. In Docker container)
+static_dir = os.environ.get("STATIC_DIR", str(Path(__file__).resolve().parent.parent / "static"))
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")

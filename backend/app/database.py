@@ -2,11 +2,20 @@ import os
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlalchemy.pool import StaticPool
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./workouts.db")
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("CALISTHENICS_DATABASE_URL")
+    or os.environ.get("SDIP_DATABASE_URL")
+    or "sqlite:///./workouts.db"
+)
 
-# Conditional connect_args to remain database-agnostic (only SQLite needs check_same_thread)
+# Ensure directory exists if SQLite path is used
+if DATABASE_URL.startswith("sqlite:////"):
+    db_file_path = DATABASE_URL.replace("sqlite:////", "/")
+    os.makedirs(os.path.dirname(db_file_path), exist_ok=True)
+
+# Conditional connect_args to remain database-agnostic
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(

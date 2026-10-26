@@ -1,7 +1,7 @@
 import { ExerciseCategory, StatsSummary, Workout, WorkoutCreate } from '../types/workout';
 import { IWorkoutService } from './workoutService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8093';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export class ApiWorkoutService implements IWorkoutService {
   private baseUrl: string;
