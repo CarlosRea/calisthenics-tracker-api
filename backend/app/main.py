@@ -1,12 +1,23 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.database import init_db
 from app.routers import auth, stats, workouts
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure tables exist and demo data is seeded on startup
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="Calisthenics Workout Tracker API",
     version="1.0.0",
     description="Backend API for logging calisthenics workouts, calculating volume, and tracking personal records.",
+    lifespan=lifespan,
 )
 
 # Configure CORS so the React frontend on localhost:5173 can interact seamlessly

@@ -1,7 +1,7 @@
 from datetime import date
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExerciseCategory(str, Enum):
@@ -25,6 +25,8 @@ class WorkoutCreate(BaseModel):
 
 
 class Workout(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     exercise_name: str
     category: ExerciseCategory
@@ -53,6 +55,8 @@ class UserCreate(BaseModel):
 
 
 class User(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     username: str
     is_active: bool = True
 

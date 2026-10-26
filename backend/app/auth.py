@@ -7,7 +7,10 @@ from typing import Optional
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
+from app.database import get_db
+from app.db_models import UserDB
 from app.models import TokenData, User
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "calisthenics-secret-key-change-in-production-123456789")
@@ -65,7 +68,10 @@ def verify_access_token(token: str) -> TokenData:
         )
 
 
-def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> User:
+def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -73,8 +79,7 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> User:
             headers={"WWW-Authenticate": "Bearer"},
         )
     token_data = verify_access_token(token)
-    from app.store import store
-    user = store.get_user(token_data.username)
+    user = db.query(UserDB).filter(UserDB.username == token_data.username).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
