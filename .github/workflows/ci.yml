@@ -91,10 +91,10 @@ jobs:
         run: docker compose down -v
 
   # ==========================================
-  # 3. Release & Health Verification
+  # 3. Automatic Deployment to Development
   # ==========================================
-  release:
-    name: Release Build & Health Validation
+  deploy-dev:
+    name: Deploy to Development Environment
     needs: [e2e-test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -104,28 +104,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Production Image
+      - name: Build & Deploy to Development
         run: |
-          docker build -t calisthenics-tracker:${{ github.sha }} .
-          echo "Production image calisthenics-tracker:${{ github.sha }} built successfully."
+          echo "Deploying latest commit ${{ github.sha }} to Development environment..."
+          docker compose up --build -d
 
-      - name: Validate Release via Health Endpoint
+      - name: Validate Development Health Endpoint
         run: |
-          echo "Starting production container to validate health endpoint..."
-          docker run -d --rm -p 8095:8095 --name prod-check calisthenics-tracker:${{ github.sha }}
-          sleep 4
-
-          echo "Polling http://localhost:8095/api/health..."
-          for i in {1..10}; do
-            if curl -sf http://localhost:8095/api/health | grep -q "healthy"; then
-              echo "Release health check PASSED!"
-              docker stop prod-check
-              exit 0
-            fi
-            echo "Attempt $i: waiting for service..."
-            sleep 2
-          done
-
-          echo "ERROR: Health check failed."
-          docker stop prod-check
-          exit 1
+          echo "Validating Development health check on port 8095..."
+          timeout 60 bash -c 'until curl -sf http://localhost:8095/api/health; do sleep 2; done'
+          echo "SUCCESS: Development release ${{ github.sha }} is healthy and live on port 8095!"
