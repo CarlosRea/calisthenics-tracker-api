@@ -8,3 +8,4 @@
 ## Roles
 
 - **PM:** Grooms a task before anyone implements it, follows `_docs/team/pm.md`.
+- **Engineer:** Implements one groomed task, follows `_docs/team/software-engineer.md`.
