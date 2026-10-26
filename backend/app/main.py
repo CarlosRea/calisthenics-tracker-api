@@ -6,8 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.database import init_db
+from app.database import engine, init_db
 from app.routers import auth, stats, workouts
+from app.telemetry import setup_telemetry
 
 
 @asynccontextmanager
@@ -23,6 +24,9 @@ app = FastAPI(
     description="Backend API for logging calisthenics workouts, calculating volume, and tracking personal records.",
     lifespan=lifespan,
 )
+
+# Initialize OpenTelemetry instrumentation
+setup_telemetry(app, engine)
 
 # Configure CORS
 app.add_middleware(
