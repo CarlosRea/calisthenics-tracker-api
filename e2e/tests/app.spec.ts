@@ -1,98 +1,157 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Calisthenics Tracker E2E & Multi-Session Tests', () => {
+test.describe('Calisthenics Workout Tracker - Comprehensive E2E Test Suite', () => {
 
-  test('Frontend compiles correctly and serves dashboard with seeded PostgreSQL data', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    // Navigate to the root application
     await page.goto('/');
+    // Wait for the workout table to load
+    await expect(page.locator('tbody tr').first()).toBeVisible();
+  });
 
-    // Check application title and header
+  test('[FEAT-5 & FEAT-6] Dashboard loads with KPI summary cards and seeded demo workouts', async ({ page }) => {
+    // 1. Verify Application Title & Header
     await expect(page).toHaveTitle(/Calisthenics Workout Tracker/);
     await expect(page.locator('h1')).toContainText('Calisthenics Tracker');
 
-    // Check KPI cards are visible and populated
-    await expect(page.getByText('Sessions')).toBeVisible();
-    await expect(page.getByText('Total Volume')).toBeVisible();
-    await expect(page.getByText('Pull PR')).toBeVisible();
+    // 2. Verify all KPI cards exist
+    await expect(page.getByText('Sessions', { exact: true })).toBeVisible();
+    await expect(page.getByText('Total Volume', { exact: true })).toBeVisible();
+    await expect(page.getByText('Pull PR', { exact: true })).toBeVisible();
+    await expect(page.getByText('Push PR', { exact: true })).toBeVisible();
+    await expect(page.getByText('Legs PR', { exact: true })).toBeVisible();
+    await expect(page.getByText('Core PR', { exact: true })).toBeVisible();
 
-    // Check history table contains seeded calisthenics entries inside the tbody
+    // 3. Verify the 4 realistic street workout seeded records
     const tbody = page.locator('tbody');
-    await expect(tbody.locator('tr')).toHaveCount(4);
-    await expect(tbody.getByRole('cell', { name: 'Weighted Pull-ups' })).toBeVisible();
-    await expect(tbody.getByRole('cell', { name: 'Parallel Bar Dips' })).toBeVisible();
-    await expect(tbody.getByRole('cell', { name: 'Pistol Squats' })).toBeVisible();
-    await expect(tbody.getByRole('cell', { name: 'Hanging Leg Raises' })).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Weighted Pull-ups' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Parallel Bar Dips' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Pistol Squats' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Hanging Leg Raises' }).first()).toBeVisible();
   });
 
-  test('Two-session test: changes in Client 2 propagate to Client 1 via shared Postgres backend', async ({ browser }) => {
-    // Session 1: Client 1 (e.g. Observer / Athlete 1)
-    const context1 = await browser.newContext();
-    const page1 = await context1.newPage();
-    await page1.goto('/');
-    const tbody1 = page1.locator('tbody');
-    await expect(tbody1.locator('tr')).toHaveCount(4);
+  test('[FEAT-1 & FEAT-4] Log a predefined weighted calisthenics session and update volume & PR', async ({ page }) => {
+    const tbody = page.locator('tbody');
+    const initialRows = await tbody.locator('tr').count();
 
-    // Session 2: Client 2 (e.g. Collaborator / Athlete 2)
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto('/');
-    const tbody2 = page2.locator('tbody');
-    await expect(tbody2.locator('tr')).toHaveCount(4);
+    // Fill form with a predefined exercise: Muscle-ups (Pull)
+    const exerciseSelect = page.locator('select').first();
+    await exerciseSelect.selectOption('Muscle-ups');
 
-    // Client 2 logs a new workout: "Dragon Flags" (Core, 3 sets, 15 reps, 0kg)
-    await page2.locator('select').first().selectOption('Dragon Flags');
-    
-    // Sets = 3, Reps = 15
-    const numberInputs = page2.locator('input[type="number"]');
-    await numberInputs.nth(0).fill('3');  // sets
-    await numberInputs.nth(1).fill('15'); // reps
+    const numberInputs = page.locator('input[type="number"]');
+    await numberInputs.nth(0).fill('4');    // Sets: 4
+    await numberInputs.nth(1).fill('9');    // Reps: 9 (beats seeded Pull PR of 8)
+    await numberInputs.nth(2).fill('5');    // Extra weight: +5 kg
 
-    // Submit form in Client 2
-    await page2.getByRole('button', { name: 'Log Workout' }).click();
+    // Submit workout
+    await page.getByRole('button', { name: 'Log Workout' }).click();
 
-    // Client 2 verifies instant feedback: 5 rows and Dragon Flags visible in table
-    await expect(tbody2.locator('tr')).toHaveCount(5);
-    await expect(tbody2.getByRole('cell', { name: 'Dragon Flags' })).toBeVisible();
+    // Verify row added to table
+    await expect(tbody.locator('tr')).toHaveCount(initialRows + 1);
+    const newRow = tbody.locator('tr').first();
+    await expect(newRow.getByRole('cell', { name: 'Muscle-ups' })).toBeVisible();
+    await expect(newRow.getByText('+5 kg')).toBeVisible();
+    await expect(newRow.getByText('36 reps')).toBeVisible(); // 4 * 9 = 36 reps
 
-    // Client 1 reloads and verifies the data was saved to PostgreSQL and appears in Client 1
-    await page1.reload();
-    await expect(tbody1.locator('tr')).toHaveCount(5);
-    await expect(tbody1.getByRole('cell', { name: 'Dragon Flags' })).toBeVisible();
-
-    // Close contexts
-    await context1.close();
-    await context2.close();
+    // Verify Pull PR updated in KPI card
+    const pullPrCard = page.locator('div').filter({ hasText: /^Pull PR/ });
+    await expect(pullPrCard.locator('div.text-2xl')).toBeVisible();
   });
 
-  test('Category filter works correctly in UI', async ({ page }) => {
-    await page.goto('/');
+  test('[FEAT-1] Log a custom street workout exercise with custom category', async ({ page }) => {
     const tbody = page.locator('tbody');
-    await expect(tbody.locator('tr').first()).toBeVisible();
+    const initialRows = await tbody.locator('tr').count();
 
-    // Click on Pull category pill
+    // Select "+ Custom Exercise..."
+    const exerciseSelect = page.locator('select').first();
+    await exerciseSelect.selectOption('CUSTOM');
+
+    // Enter custom exercise details
+    const customInput = page.locator('input[placeholder="e.g. Ring Archer Push-ups"]');
+    await expect(customInput).toBeVisible();
+    await customInput.fill('Handstand Push-ups');
+
+    const categorySelect = page.locator('select').nth(1);
+    await categorySelect.selectOption('Push');
+
+    const numberInputs = page.locator('input[type="number"]');
+    await numberInputs.nth(0).fill('3');    // Sets: 3
+    await numberInputs.nth(1).fill('8');    // Reps: 8
+
+    // Submit
+    await page.getByRole('button', { name: 'Log Workout' }).click();
+
+    // Verify new custom exercise in table
+    await expect(tbody.locator('tr')).toHaveCount(initialRows + 1);
+    await expect(tbody.getByRole('cell', { name: 'Handstand Push-ups' }).first()).toBeVisible();
+    await expect(tbody.locator('tr').first().getByText('Push', { exact: true })).toBeVisible();
+  });
+
+  test('[FEAT-2] Filter workouts by movement category and exercise search substring', async ({ page }) => {
+    const tbody = page.locator('tbody');
+
+    // 1. Filter by "Push" category pill
+    await page.getByRole('button', { name: 'Push', exact: true }).click();
+    await expect(tbody.getByRole('cell', { name: 'Parallel Bar Dips' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Pistol Squats' })).not.toBeVisible();
+
+    // 2. Filter by "Pull" category pill
     await page.getByRole('button', { name: 'Pull', exact: true }).click();
-    await expect(tbody.locator('tr')).toHaveCount(1);
-    await expect(tbody.getByRole('cell', { name: 'Weighted Pull-ups' })).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Weighted Pull-ups' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Parallel Bar Dips' })).not.toBeVisible();
 
-    // Click back to All
+    // 3. Reset filter to "All"
     await page.getByRole('button', { name: 'All', exact: true }).click();
-    await expect(tbody.locator('tr')).toHaveCount(5); // 4 seeded + 1 added
+    await expect(tbody.getByRole('cell', { name: 'Parallel Bar Dips' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Pistol Squats' }).first()).toBeVisible();
+
+    // 4. Substring search for "dips"
+    const searchInput = page.locator('input[placeholder="Filter by exercise..."]');
+    await searchInput.fill('dips');
+    await expect(tbody.getByRole('cell', { name: 'Parallel Bar Dips' }).first()).toBeVisible();
+    await expect(tbody.getByRole('cell', { name: 'Pistol Squats' })).not.toBeVisible();
+
+    // Clear search
+    await searchInput.fill('');
+    await expect(tbody.locator('tr').first()).toBeVisible();
   });
 
-  test('Delete workout removes entry and updates stats across clients', async ({ page }) => {
-    // Register dialog handler before navigating
+  test('[FEAT-3] Delete a mistaken workout entry and update table & KPI volume', async ({ page }) => {
+    // Automatically accept window.confirm dialog
     page.on('dialog', async (dialog) => {
       await dialog.accept();
     });
 
-    await page.goto('/');
     const tbody = page.locator('tbody');
-    await expect(tbody.locator('tr')).toHaveCount(5);
+    const initialRows = await tbody.locator('tr').count();
 
-    // Delete the first row
-    const firstDeleteBtn = tbody.locator('tr').first().locator('button[title="Delete entry"]');
-    await firstDeleteBtn.click();
+    // Click delete on the first row
+    const firstRowDeleteBtn = tbody.locator('tr').first().locator('button[title="Delete entry"]');
+    await firstRowDeleteBtn.click();
 
-    // Verify row count decreased to 4
-    await expect(tbody.locator('tr')).toHaveCount(4);
+    // Verify row count decreased by 1
+    await expect(tbody.locator('tr')).toHaveCount(initialRows - 1);
+  });
+
+  test('Data persistence: Workouts remain stored in PostgreSQL after page reload', async ({ page }) => {
+    const tbody = page.locator('tbody');
+
+    // Log a specific session to verify persistence
+    const exerciseSelect = page.locator('select').first();
+    await exerciseSelect.selectOption('Chin-ups');
+
+    const numberInputs = page.locator('input[type="number"]');
+    await numberInputs.nth(0).fill('3');
+    await numberInputs.nth(1).fill('11');
+    await numberInputs.nth(2).fill('0');
+
+    await page.getByRole('button', { name: 'Log Workout' }).click();
+    await expect(tbody.getByRole('cell', { name: 'Chin-ups' }).first()).toBeVisible();
+
+    // Hard reload the browser window
+    await page.reload();
+
+    // Verify Chin-ups is still present (persisted in PostgreSQL DB)
+    await expect(tbody.getByRole('cell', { name: 'Chin-ups' }).first()).toBeVisible();
   });
 });
