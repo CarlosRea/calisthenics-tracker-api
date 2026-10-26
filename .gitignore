@@ -24,3 +24,6 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# On-Call Engineer Incidents Logs
+on-call-engineer/incidents/

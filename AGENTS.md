@@ -12,6 +12,8 @@
 - `make e2e` - run Playwright end-to-end tests against Docker Compose
 - `make observability-up` - start OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana
 - `make observability-down` - stop Observability stack
+- `make on-call-worker` - start On-Call engineer alert polling worker
+- `make on-call-test` - test On-Call worker once against Prometheus alert API
 - `make install` - install all dependencies
 
 ## Backend Commands

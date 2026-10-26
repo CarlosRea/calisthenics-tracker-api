@@ -1,4 +1,4 @@
-.PHONY: run test frontend-dev frontend-test test-all install docker-build docker-run compose-up compose-down prod-up prod-down postgres-start run-postgres e2e observability-up observability-down help
+.PHONY: run test frontend-dev frontend-test test-all install docker-build docker-run compose-up compose-down prod-up prod-down postgres-start run-postgres e2e observability-up observability-down on-call-worker on-call-test help
 
 PORT ?= 8093
 DOCKER_PORT ?= 8095
@@ -93,3 +93,9 @@ observability-up:
 
 observability-down:
 	docker compose -f observability/docker-compose.yaml down
+
+on-call-worker:
+	python3 on-call-engineer/worker.py
+
+on-call-test:
+	python3 on-call-engineer/worker.py --once
