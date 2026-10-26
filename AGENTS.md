@@ -1,11 +1,19 @@
 # AGENTS.md
 
+## Makefile Shortcuts
+- `make run` - run FastAPI backend server on port 8093 (`http://localhost:8093/docs`)
+- `make test` - run backend test suite
+- `make frontend-dev` - start Vite frontend server
+- `make frontend-test` - run frontend Vitest suite
+- `make test-all` - run all backend and frontend tests
+- `make install` - install all dependencies
+
 ## Backend Commands
 - `uv sync` - install and sync dependencies
 - `uv add <PACKAGE-NAME>` - add a dependency to pyproject.toml
 - `uv run python <PYTHON-FILE>` - run a Python script
 - `uv run pytest` - run the whole backend test suite
-- `uv run uvicorn app.main:app --reload` - run the development server
+- `uv run uvicorn app.main:app --reload --port 8093` - run the development server
 
 ## Frontend Commands
 - `cd frontend && npm i` - install frontend dependencies
