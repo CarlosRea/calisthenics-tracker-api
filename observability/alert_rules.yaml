@@ -1,0 +1,36 @@
+groups:
+  - name: calisthenics_alerts
+    rules:
+      - alert: WorkoutComponentCreationFailures
+        expr: increase(calisthenics_workout_errors_total{operation="create_workout"}[2m]) >= 3
+        for: 30s
+        labels:
+          severity: critical
+          service: calisthenics-tracker-api
+          owner: team-calisthenics-core
+          alert_name: workout_creation_failures
+        annotations:
+          summary: "Repeated workout component creation failures detected"
+          description: "Workout creation failed {{ $value }} times over the last 2 minutes in {{ $labels.environment }} (v{{ $labels.version }}). Users are unable to save workouts."
+          service: "calisthenics-tracker-api"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.version }}"
+          owner: "team-calisthenics-core"
+          dashboard_url: "http://localhost:3000/d/calisthenics-metrics/calisthenics-tracker-application-metrics?var-environment={{ $labels.environment }}"
+          action: "Check container logs in Loki (service=calisthenics-tracker-api) and verify database health on PostgreSQL."
+
+      - alert: WorkoutOperationHighErrorRate
+        expr: increase(calisthenics_workout_errors_total[2m]) >= 5
+        for: 30s
+        labels:
+          severity: warning
+          service: calisthenics-tracker-api
+          owner: team-calisthenics-core
+        annotations:
+          summary: "High rate of workout operation errors"
+          description: "There have been {{ $value }} failed workout operations over the last 2 minutes in {{ $labels.environment }} (v{{ $labels.version }})."
+          service: "calisthenics-tracker-api"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.version }}"
+          owner: "team-calisthenics-core"
+          dashboard_url: "http://localhost:3000/d/calisthenics-metrics/calisthenics-tracker-application-metrics?var-environment={{ $labels.environment }}"

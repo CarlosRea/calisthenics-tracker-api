@@ -2,13 +2,15 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, init_db
 from app.routers import auth, stats, workouts
-from app.telemetry import setup_telemetry
+from app.telemetry import record_workout_error, setup_telemetry
 
 
 @asynccontextmanager
@@ -27,6 +29,13 @@ app = FastAPI(
 
 # Initialize OpenTelemetry instrumentation
 setup_telemetry(app, engine)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    if "/api/workouts" in request.url.path:
+        op = "create_workout" if request.method == "POST" else "query_workouts"
+        record_workout_error(operation=op, reason="validation_error")
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 # Configure CORS
 app.add_middleware(
