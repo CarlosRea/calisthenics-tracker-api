@@ -1,0 +1,178 @@
+openapi: 3.1.0
+info:
+  title: Calisthenics Workout Tracker API
+  version: 1.0.0
+  description: API for logging calisthenics workouts, calculating volume, and tracking personal records.
+paths:
+  /api/workouts:
+    post:
+      summary: Log a new workout entry
+      operationId: createWorkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutCreate'
+      responses:
+        '201':
+          description: Workout created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workout'
+        '422':
+          description: Validation error
+    get:
+      summary: List all workout entries
+      operationId: listWorkouts
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ExerciseCategory'
+        - name: exercise
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of workouts ordered by date descending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workout'
+
+  /api/workouts/{id}:
+    delete:
+      summary: Delete a workout entry
+      operationId: deleteWorkout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Workout deleted successfully
+        '404':
+          description: Workout not found
+
+  /api/stats/summary:
+    get:
+      summary: Retrieve training volume and personal records summary
+      operationId: getStatsSummary
+      responses:
+        '200':
+          description: Analytics summary metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsSummary'
+
+components:
+  schemas:
+    ExerciseCategory:
+      type: string
+      enum: [Pull, Push, Legs, Core]
+
+    WorkoutCreate:
+      type: object
+      required:
+        - exercise_name
+        - category
+        - sets
+        - reps
+      properties:
+        exercise_name:
+          type: string
+          example: "Pull-ups"
+        category:
+          $ref: '#/components/schemas/ExerciseCategory'
+        sets:
+          type: integer
+          minimum: 1
+          example: 4
+        reps:
+          type: integer
+          minimum: 1
+          example: 10
+        added_weight:
+          type: number
+          default: 0.0
+          example: 10.0
+        date:
+          type: string
+          format: date
+          example: "2026-10-26"
+
+    Workout:
+      type: object
+      required:
+        - id
+        - exercise_name
+        - category
+        - sets
+        - reps
+        - added_weight
+        - date
+      properties:
+        id:
+          type: integer
+          example: 1
+        exercise_name:
+          type: string
+          example: "Pull-ups"
+        category:
+          $ref: '#/components/schemas/ExerciseCategory'
+        sets:
+          type: integer
+          example: 4
+        reps:
+          type: integer
+          example: 10
+        added_weight:
+          type: number
+          example: 10.0
+        date:
+          type: string
+          format: date
+          example: "2026-10-26"
+
+    CategoryPR:
+      type: object
+      properties:
+        Pull:
+          type: integer
+          example: 15
+        Push:
+          type: integer
+          example: 25
+        Legs:
+          type: integer
+          example: 30
+        Core:
+          type: integer
+          example: 20
+
+    StatsSummary:
+      type: object
+      required:
+        - total_workouts
+        - total_volume
+        - personal_records
+      properties:
+        total_workouts:
+          type: integer
+          example: 12
+        total_volume:
+          type: integer
+          description: Total repetitions (sum of sets * reps)
+          example: 480
+        personal_records:
+          $ref: '#/components/schemas/CategoryPR'
