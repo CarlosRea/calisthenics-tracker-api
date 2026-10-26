@@ -10,6 +10,7 @@
 - **PM:** Grooms a task before anyone implements it, follows `docs/team/pm.md`.
 - **Engineer:** Implements one groomed task, follows `docs/team/software-engineer.md`.
 - **QA:** Checks the result against the acceptance criteria, follows `docs/team/qa-engineer.md`.
+- **DevOps:** Maintains the CI/CD pipeline, container infrastructure, and automated AWS deployments, follows `docs/team/devops.md`.
 
 ## Orchestrator
 
