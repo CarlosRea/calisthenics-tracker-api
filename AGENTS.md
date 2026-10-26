@@ -10,6 +10,8 @@
 - `make compose-up` - build and run full stack in Docker Compose (FastAPI + React on port 8095, PostgreSQL on port 5434)
 - `make compose-down` - stop Docker Compose services
 - `make e2e` - run Playwright end-to-end tests against Docker Compose
+- `make observability-up` - start OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana
+- `make observability-down` - stop Observability stack
 - `make install` - install all dependencies
 
 ## Backend Commands

@@ -1,4 +1,4 @@
-.PHONY: run test frontend-dev frontend-test test-all install docker-build docker-run compose-up compose-down prod-up prod-down postgres-start run-postgres e2e help
+.PHONY: run test frontend-dev frontend-test test-all install docker-build docker-run compose-up compose-down prod-up prod-down postgres-start run-postgres e2e observability-up observability-down help
 
 PORT ?= 8093
 DOCKER_PORT ?= 8095
@@ -87,3 +87,9 @@ prod-down:
 
 e2e:
 	cd e2e && npx playwright test
+
+observability-up:
+	docker compose -f observability/docker-compose.yaml up -d
+
+observability-down:
+	docker compose -f observability/docker-compose.yaml down
