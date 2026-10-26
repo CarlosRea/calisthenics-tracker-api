@@ -31,3 +31,21 @@ def test_stats_update_after_new_workout(client):
     assert data["total_workouts"] == 5
     assert data["total_volume"] == 158 + (3 * 14)  # 158 + 42 = 200
     assert data["personal_records"]["Pull"] == 14
+
+
+def test_get_stats_summary_empty(client, db_session):
+    from app.db_models import WorkoutDB
+
+    # Clear all workouts from test database
+    db_session.query(WorkoutDB).delete()
+    db_session.commit()
+
+    response = client.get("/api/stats/summary")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_workouts"] == 0
+    assert data["total_volume"] == 0
+    assert data["personal_records"]["Pull"] == 0
+    assert data["personal_records"]["Push"] == 0
+    assert data["personal_records"]["Legs"] == 0
+    assert data["personal_records"]["Core"] == 0

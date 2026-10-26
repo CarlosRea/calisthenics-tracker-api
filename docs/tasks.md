@@ -26,4 +26,28 @@ Description: Implement a startup lifespan handler that checks if the workout tab
 
 ## 7. Interactive Web Dashboard Frontend
 Goal: Build and serve a responsive single-page dashboard interfacing with the API.
-Description: Create an HTML5 single-page interface styled with Tailwind CSS (via CDN) and Vanilla JS, served directly at the root `GET /` via FastAPI static files. Implement KPI summary cards for metrics and PRs, a quick-add form with category and exercise selections, category filter buttons, and a history table with inline delete buttons. Connect the UI directly to the REST API using native `fetch` calls.
+Description: Create a React 18 single-page interface styled with Tailwind CSS and Vite, served directly at the root `GET /` via FastAPI static files. Implement KPI summary cards for metrics and PRs, a quick-add form with category and exercise selections, category filter buttons, and a history table with inline delete buttons. Connect the UI directly to the REST API.
+
+## 8. Multi-Stage Docker Containerization and Compose Stack
+Goal: Package frontend build and backend execution into an optimized multi-stage Docker image and provide Compose stacks for local and PostgreSQL environments.
+Description: Implement a two-stage `Dockerfile` where Node 20 compiles the Vite frontend into static assets and Python 3.12-slim runs FastAPI serving the compiled static assets. Configure `docker-compose.yaml` with a PostgreSQL 16 database container on port 5434 and healthchecks.
+
+## 9. End-to-End Testing Suite with Playwright
+Goal: Implement browser end-to-end test scenarios testing key user flows against the containerized stack.
+Description: Create Playwright tests in `e2e/tests/app.spec.ts` testing predefined workouts logging, custom exercise entry, category filtering, deletion, and PostgreSQL persistence across browser reloads. Expose test execution through `make e2e`.
+
+## 10. CI/CD Workflows and Independent Dev/Prod Environments
+Goal: Establish continuous testing and independent development and production environments.
+Description: Define `.github/workflows/ci.yml` for parallel unit testing and image building with short-SHA tags. Configure independent production stack in `docker-compose.prod.yaml` on port 8096 with isolated PostgreSQL database on port 5435. Create manual promotion workflow in `.github/workflows/promote-to-prod.yml`.
+
+## 11. OpenTelemetry Instrumentation & Observability Stack
+Goal: Instrument backend with distributed tracing and application metrics exported to an isolated observability stack.
+Description: Integrate OpenTelemetry in `backend/app/telemetry.py` capturing requests, DB queries, and domain metrics (`calisthenics_workouts_created_total`, `calisthenics_reps_logged_total`, etc.). Deploy Prometheus (`:9090`), Loki (`:3100`), Tempo (`:3200`), OTel Collector (`:4317/:4318/:8889`), and Grafana (`:3000`) with provisioned datasource and metrics dashboard in `observability/`.
+
+## 12. Actionable Alerting and Prometheus Alert Rules
+Goal: Configure actionable alerting for repeated workout creation failures with dynamic environment and version metadata.
+Description: Define Prometheus alerting rule `WorkoutComponentCreationFailures` in `observability/alert_rules.yaml` triggering when failures exceed 3 within 2 minutes. Create operational runbook in `docs/runbooks/workout_creation_failures.md` and add Active Firing Alerts stat panel to Grafana dashboard.
+
+## 13. Autonomous On-Call Engineer Worker
+Goal: Implement an automated on-call polling worker that intercepts active firing alerts and launches a headless coding agent session.
+Description: Create `on-call-engineer/worker.py` polling `http://localhost:9090/api/v1/alerts` every 60s. When an alert fires, format a structured diagnostic prompt with alert metadata, launch the headless agent (`agy -p "..." --dangerously-skip-permissions`), and save incident logs in `on-call-engineer/incidents/`.
