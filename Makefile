@@ -62,6 +62,11 @@ install:
 docker-build:
 	docker build -t $(IMAGE_NAME) .
 
+docker-build-tagged:
+	@TAG="$$(date +'%Y%m%d-%H%M%S')-$$(git rev-parse --short HEAD)"; \
+	echo "Building tagged image: $(IMAGE_NAME):$$TAG"; \
+	docker build -t $(IMAGE_NAME):$$TAG -t $(IMAGE_NAME):latest .
+
 docker-run:
 	docker run --rm -p $(DOCKER_PORT):$(DOCKER_PORT) \
 	  -v calisthenics-data:/data \

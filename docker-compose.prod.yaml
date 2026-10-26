@@ -19,6 +19,7 @@ services:
       start_period: 3s
 
   app:
+    image: ${REGISTRY:-ghcr.io/carlosrea/calisthenics-tracker}:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
