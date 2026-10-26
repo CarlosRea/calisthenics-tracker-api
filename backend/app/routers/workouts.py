@@ -6,24 +6,41 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.db_models import WorkoutDB
 from app.models import ExerciseCategory, Workout, WorkoutCreate
+from app.telemetry import (
+    record_workout_created,
+    record_workout_deleted,
+    record_workout_error,
+)
 
 router = APIRouter(prefix="/api/workouts", tags=["Workouts"])
 
 
 @router.post("", response_model=Workout, status_code=status.HTTP_201_CREATED)
 def create_workout(workout: WorkoutCreate, db: Session = Depends(get_db)):
-    db_workout = WorkoutDB(
-        exercise_name=workout.exercise_name.strip(),
-        category=workout.category.value,
-        sets=workout.sets,
-        reps=workout.reps,
-        added_weight=workout.added_weight,
-        date=workout.date or date.today().isoformat(),
-    )
-    db.add(db_workout)
-    db.commit()
-    db.refresh(db_workout)
-    return db_workout
+    try:
+        db_workout = WorkoutDB(
+            exercise_name=workout.exercise_name.strip(),
+            category=workout.category.value,
+            sets=workout.sets,
+            reps=workout.reps,
+            added_weight=workout.added_weight,
+            date=workout.date or date.today().isoformat(),
+        )
+        db.add(db_workout)
+        db.commit()
+        db.refresh(db_workout)
+
+        # Record domain application metrics
+        record_workout_created(
+            category=db_workout.category,
+            exercise=db_workout.exercise_name,
+            sets=db_workout.sets,
+            reps=db_workout.reps,
+        )
+        return db_workout
+    except Exception as e:
+        record_workout_error(operation="create_workout", reason=str(e))
+        raise
 
 
 @router.get("", response_model=List[Workout])
@@ -49,10 +66,15 @@ def list_workouts(
 def delete_workout(workout_id: int, db: Session = Depends(get_db)):
     db_workout = db.query(WorkoutDB).filter(WorkoutDB.id == workout_id).first()
     if not db_workout:
+        record_workout_error(operation="delete_workout", reason="not_found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Workout with ID {workout_id} not found"
         )
+    category = db_workout.category
     db.delete(db_workout)
     db.commit()
+
+    # Record deletion metric
+    record_workout_deleted(category=category)
     return None

@@ -6,6 +6,7 @@ from app.auth import create_access_token, get_current_user, hash_password, verif
 from app.database import get_db
 from app.db_models import UserDB
 from app.models import Token, User, UserCreate
+from app.telemetry import record_user_login
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -38,12 +39,14 @@ def login_for_access_token(
 ):
     user = db.query(UserDB).filter(UserDB.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password, user.salt):
+        record_user_login(username=form_data.username, success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.username})
+    record_user_login(username=user.username, success=True)
     return Token(access_token=access_token, token_type="bearer")
 
 
@@ -51,12 +54,14 @@ def login_for_access_token(
 def login_json(user_in: UserCreate, db: Session = Depends(get_db)):
     user = db.query(UserDB).filter(UserDB.username == user_in.username).first()
     if not user or not verify_password(user_in.password, user.hashed_password, user.salt):
+        record_user_login(username=user_in.username, success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.username})
+    record_user_login(username=user.username, success=True)
     return Token(access_token=access_token, token_type="bearer")
 
 

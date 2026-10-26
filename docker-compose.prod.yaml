@@ -27,11 +27,15 @@ services:
     restart: always
     ports:
       - "8096:8095"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       DATABASE_URL: postgresql://calisthenics_prod:calisthenics_prod_secure_password@db:5432/calisthenics_prod
       PORT: "8095"
       STATIC_DIR: "/app/static"
       ENVIRONMENT: "production"
+      SERVICE_VERSION: "1.0.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4318/v1/traces"
     depends_on:
       db:
         condition: service_healthy

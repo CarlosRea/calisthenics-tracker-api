@@ -22,3 +22,20 @@ def test_tracer_creation_and_span():
         span.set_attribute("workout.exercise", "Muscle-up")
         span.set_attribute("workout.reps", 10)
         assert span.is_recording() or span.get_span_context().is_valid
+
+
+def test_metric_recorders_execute_safely():
+    from app.telemetry import (
+        record_workout_created,
+        record_workout_deleted,
+        record_workout_error,
+        record_user_login,
+        flush_metrics,
+    )
+    # Ensure all recording functions execute without raising exceptions
+    record_workout_created(category="push", exercise="Handstand Push-up", sets=4, reps=8)
+    record_workout_deleted(category="push")
+    record_workout_error(operation="create_workout", reason="invalid_data")
+    record_user_login(username="admin", success=True)
+    record_user_login(username="invalid_user", success=False)
+    flush_metrics()
