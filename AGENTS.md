@@ -41,3 +41,15 @@
 - `docs/spec.md` - project specification and product scope
 - `docs/tasks.md` - backlog tasks and GitHub issues mapping
 - `openapi.yaml` - explicit API contract shared by frontend and backend
+
+## Agent Skills (`.agents/skills/`)
+- `incident-response` - triage, reproduce, and remediate active observability alerts
+- `release` - bump versions, build multi-stage images, tag, and verify releases
+- `test-and-verify` - execute backend, frontend, and Playwright E2E suites
+
+## Specialized Subagents (`.agents/agents/`)
+- `product-manager` - groom raw issues into verifiable acceptance criteria (`docs/team/pm.md`)
+- `software-engineer` - implement groomed tasks and write tests (`docs/team/software-engineer.md`)
+- `qa-engineer` - validate implementation against criteria and return PASS or FAIL (`docs/team/qa-engineer.md`)
+- `devops` - manage Docker Compose, CI/CD, and OpenTelemetry (`docs/team/devops.md`)
+- `on-call-engineer` - investigate and remediate firing Prometheus alerts

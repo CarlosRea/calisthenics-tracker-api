@@ -1,34 +1,78 @@
 # Development Process
 
-- **One Task at a Time:** Work on GitHub issues sequentially, one at a time.
-- **Acceptance Criteria:** Read the acceptance criteria before starting a task and verify all criteria are satisfied before closing the issue.
-- **Commit Regularly:** Make granular git commits after each meaningful decision, passing test, or completed feature.
-- **Maintain Documents:** Update documentation in `docs/` whenever architectural, testing, or design decisions evolve.
+## Core Engineering Rules
+- **Task Isolation:** Work on well-defined backlog issues with clear file boundaries.
+- **Acceptance Criteria:** Every issue must have explicit, checkable acceptance criteria before implementation starts.
+- **Continuous Validation:** Run automated test suites (`make test-all`, `make e2e`) before merging any branch.
+- **Granular Commits:** Make descriptive git commits after each passing test or milestone.
 
-## Roles
+---
 
-- **PM:** Grooms a task before anyone implements it, follows `docs/team/pm.md`.
-- **Engineer:** Implements one groomed task, follows `docs/team/software-engineer.md`.
-- **QA:** Checks the result against the acceptance criteria, follows `docs/team/qa-engineer.md`.
-- **DevOps:** Maintains the CI/CD pipeline, container infrastructure, and automated release validation, follows `docs/team/devops.md`.
+## Agentic Building Blocks
 
-## Orchestrator
+### 1. Discoverable Skills (`.agents/skills/`)
+Skills provide structured, repeatable procedures that agents discover and execute automatically:
+- [`incident-response`](file:///home/ubuntu/calisthenics-tracker-api/.agents/skills/incident-response/SKILL.md): Triage, reproduce, and resolve active alerts.
+- [`release`](file:///home/ubuntu/calisthenics-tracker-api/.agents/skills/release/SKILL.md): Bump versions, build tagged multi-stage images, and verify releases.
+- [`test-and-verify`](file:///home/ubuntu/calisthenics-tracker-api/.agents/skills/test-and-verify/SKILL.md): Execute backend, frontend, and Playwright E2E suites.
 
-The main session is the orchestrator. It launches the PM, the engineer and QA as subagents. It does not groom, implement or test itself.
+### 2. Specialized Subagents (`.agents/agents/`)
+Specialized roles execute in fresh context windows to eliminate context rot and cognitive bias:
+- [`product-manager`](file:///home/ubuntu/calisthenics-tracker-api/.agents/agents/product-manager.md): Grooms raw user stories into specifications with checkable criteria (`docs/team/pm.md`).
+- [`software-engineer`](file:///home/ubuntu/calisthenics-tracker-api/.agents/agents/software-engineer.md): Implements groomed tasks and writes comprehensive tests (`docs/team/software-engineer.md`).
+- [`qa-engineer`](file:///home/ubuntu/calisthenics-tracker-api/.agents/agents/qa-engineer.md): Validates finished work against acceptance criteria and returns a strict verdict (`PASS` or `FAIL`) (`docs/team/qa-engineer.md`).
+- [`devops`](file:///home/ubuntu/calisthenics-tracker-api/.agents/agents/devops.md): Manages Docker Compose stacks, CI/CD workflows, and OpenTelemetry instrumentation (`docs/team/devops.md`).
+- [`on-call-engineer`](file:///home/ubuntu/calisthenics-tracker-api/.agents/agents/on-call-engineer.md): Investigates alerts polled from the Prometheus Alert API.
 
-### Lifecycle
+---
 
-1. Pick the next open issue from the backlog
-2. PM grooms it
-3. Engineer implements it
-4. QA verifies it
-5. On FAIL, back to step 3 with the QA comment as input
-6. On PASS, close the issue
-7. Repeat until the backlog is empty
+## Orchestrator & Parallel Execution
 
-### Rules
+The main coding session serves as the **Task Orchestrator**. It coordinates the workflow and never implements or tests issues itself.
 
-- Do not skip step 2
-- The engineer does not close the issue
-- QA does not fix the code, only outputs PASS or FAIL
-- The orchestrator closes the issue only after QA outputs PASS
+### Sequential Task Lifecycle
+```
+[ Backlog Issue ]
+       │
+       ▼
+[ Product Manager (PM) ] ── (Grooms specs & acceptance criteria)
+       │
+       ▼
+[ Software Engineer (SWE) ] ◄──┐
+       │                       │
+       ▼                       │
+[ QA Engineer (QA) ] ──────────┘
+       │
+       ├─► FAIL: Return QA failure log to SWE
+       └─► PASS: Orchestrator closes issue & merges code
+```
+
+### Parallel Execution with Git Worktrees
+When working on multiple independent issues simultaneously, the orchestrator parallelizes work across isolated git worktrees (running up to five agents in parallel):
+
+```
+                      +-------------------+
+                      |   Orchestrator    |
+                      +---------+---------+
+                                │
+       ┌────────────────────────┼────────────────────────┐
+       ▼                        ▼                        ▼
++--------------+         +--------------+         +--------------+
+| Worktree #1  |         | Worktree #2  |         | Worktree #3  |
+| Issue #101   |         | Issue #102   |         | Issue #103   |
+| (PM->SWE->QA)|         | (PM->SWE->QA)|         | (PM->SWE->QA)|
++-------+------+         +-------+------+         +-------+------+
+        │                        │                        │
+        └────────────────────────┼────────────────────────┘
+                                 ▼
+                     Sequential Merge into main
+```
+
+#### Orchestrator Responsibilities:
+1. **Backlog Partitioning:** Split backlog into independent, non-overlapping issue tracks.
+2. **Worktree Provisioning:** Create an isolated git worktree for each task (`git worktree add ../wt-issue-101 -b feat/issue-101`).
+3. **Capacity Management:** Keep up to 5 agent slots active while eligible backlog items remain.
+4. **Independent Review:** Dispatch completed implementation to a fresh QA subagent.
+5. **Feedback Loop:** On `FAIL`, send reproduction steps and failed criteria back to the implementer in that worktree.
+6. **Sequential Merge:** On `PASS`, merge approved worktree branches into `main` one at a time, verify tests, and prune the worktree (`git worktree remove`).
+7. **Zero Scope Creep:** Coordinate the work; never edit code directly in the orchestrator session.
