@@ -1,4 +1,4 @@
-.PHONY: run test frontend-dev frontend-test test-all install docker-build docker-run postgres-start run-postgres help
+.PHONY: run test frontend-dev frontend-test test-all install docker-build docker-run compose-up compose-down postgres-start run-postgres help
 
 PORT ?= 8093
 DOCKER_PORT ?= 8095
@@ -67,3 +67,9 @@ docker-run:
 	  -v calisthenics-data:/data \
 	  -e DATABASE_URL=sqlite:////data/workouts.db \
 	  --name calisthenics-app $(IMAGE_NAME)
+
+compose-up:
+	docker compose up --build
+
+compose-down:
+	docker compose down

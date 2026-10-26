@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: calisthenics-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: calisthenics
+      POSTGRES_PASSWORD: calisthenics
+      POSTGRES_DB: calisthenics
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calisthenics -d calisthenics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: calisthenics-app
+    restart: unless-stopped
+    ports:
+      - "8095:8095"
+    environment:
+      DATABASE_URL: postgresql://calisthenics:calisthenics@db:5432/calisthenics
+      PORT: "8095"
+      STATIC_DIR: "/app/static"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
